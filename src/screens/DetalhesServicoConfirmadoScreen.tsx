@@ -6,13 +6,12 @@ import Footer from '../components/Footer';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { URLAPI } from '../constants/ApiUrl';
+import { PreviewRankingUsuario } from '../components/ranking/PreviewRankingUsuario';
 
 export const DetalhesServicoConfirmadoScreen = () => {
     const { id } = useParams<{ id: string }>();
-
-    
-    
     const [service, setService] = useState<HistoricoServico | null>(null);
+    const [showRanking, setShowRanking] = useState(false);
     
     const procurarServico = async () => {
         try {
@@ -143,15 +142,38 @@ export const DetalhesServicoConfirmadoScreen = () => {
                         <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">{service.descricao}</p>
                     </div>
 
-                    <button
-                        onClick={handlePagar}
-                        className="mt-6 bg-[#A75C00] text-white py-2 px-6 rounded-md hover:bg-[#8B4D00] transition-colors w-full md:w-auto"
-                    >
-                        Ir para Pagamento
-                    </button>
+                    {/* Seção de Ranking do Cliente */}
+                    <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h3 className="text-lg font-semibold text-blue-800 mb-3">
+                            👁️ Ver Ranking do Cliente
+                        </h3>
+                        <p className="text-blue-700 mb-4">
+                            Antes de prosseguir com o pagamento, você pode verificar o ranking deste cliente para tomar uma decisão mais informada.
+                        </p>
+                        <button
+                            onClick={() => setShowRanking(true)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors mr-3"
+                        >
+                            Ver Ranking
+                        </button>
+                        <button
+                            onClick={handlePagar}
+                            className="bg-[#A75C00] text-white py-2 px-6 rounded-md hover:bg-[#8B4D00] transition-colors"
+                        >
+                            Ir para Pagamento
+                        </button>
+                    </div>
                 </div>
             </div>
             <Footer />
+
+            {/* Modal de Ranking */}
+            {showRanking && (
+                <PreviewRankingUsuario
+                    id_usuario={service.id_usuario || '123456'}
+                    onClose={() => setShowRanking(false)}
+                />
+            )}
         </>
     );
 }; 

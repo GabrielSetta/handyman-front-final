@@ -12,6 +12,7 @@ import io from 'socket.io-client';
 import { Socket } from 'socket.io-client';
 import { Modal } from "../Modal";
 import Chat from "../Chat";
+import { AvaliacaoUsuario } from '../ranking/AvaliacaoUsuario';
 
 interface ExibirAgendamentoFornecedorProps {
     idServico: string;
@@ -26,6 +27,7 @@ const getStatusConfig = (status: string) => {
         case 'em andamento':
             return { color: '#2196F3', bgColor: '#E3F2FD', text: 'Em Andamento' };
         case 'concluido':
+        case 'concluído':
             return { color: '#4CAF50', bgColor: '#E8F5E9', text: 'Concluído' };
         case 'cancelado':
             return { color: '#F44336', bgColor: '#FFEBEE', text: 'Cancelado' };
@@ -48,6 +50,7 @@ export const ExibirAgendamentoFornecedor = ({ idServico }: ExibirAgendamentoForn
     const [novoValor, setNovoValor] = useState<string>('');
     const [isChatOpen, setIsChatOpen] = useState(false);
     const [id_servico, setIdServico] = useState("");
+    const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
     const navigate = useNavigate();
     const socketRef = useRef<Socket | null>(null);
 
@@ -178,22 +181,19 @@ export const ExibirAgendamentoFornecedor = ({ idServico }: ExibirAgendamentoForn
     };
 
     const handleNegociarPreco = async () => {
-        try {
-            if (!novoValor || isNaN(Number(novoValor)) || Number(novoValor) <= 0) {
-                toast.error('Por favor, insira um valor válido');
-                return;
-            }
+        if (!novoValor || isNaN(Number(novoValor)) || Number(novoValor) <= 0) {
+            toast.error('Por favor, insira um valor válido');
+            return;
+        }
 
+        try {
             const data = {
                 id_servico: idServico,
                 valor: Number(novoValor)
             };
 
             await axios.put(`${URLAPI}/servicos/valor`, data);
-            atualizarStatus('confirmar valor');
-
             toast.success('Valor atualizado com sucesso!');
-
             setShowNegociacaoModal(false);
             setNovoValor('');
             fetchAgendamento();
@@ -201,6 +201,12 @@ export const ExibirAgendamentoFornecedor = ({ idServico }: ExibirAgendamentoForn
             console.error('Erro ao atualizar valor:', error);
             toast.error('Erro ao atualizar valor');
         }
+    };
+
+    const handleAvaliacaoConcluida = () => {
+        setShowAvaliacaoModal(false);
+        toast.success('Avaliação do cliente enviada com sucesso!');
+        fetchAgendamento(); // Recarregar dados para atualizar status se necessário
     };
 
     if (loading) {
@@ -260,14 +266,28 @@ export const ExibirAgendamentoFornecedor = ({ idServico }: ExibirAgendamentoForn
                         <div className="space-y-6">
                             {/* Status e Valor */}
                             <div className="flex justify-between items-center">
-                                <div
-                                    className="px-4 py-2 rounded-full text-lg font-medium"
-                                    style={{
-                                        backgroundColor: statusConfig.bgColor,
-                                        color: statusConfig.color
-                                    }}
-                                >
-                                    {statusConfig.text}
+                                <div className="flex items-center space-x-4">
+                                    <div
+                                        className="px-4 py-2 rounded-full text-lg font-medium"
+                                        style={{
+                                            backgroundColor: statusConfig.bgColor,
+                                            color: statusConfig.color
+                                        }}
+                                    >
+                                        {statusConfig.text}
+                                    </div>
+                                    {/* Botão de Avaliar Cliente - aparece quando serviço está concluído */}
+                                    {(agendamento.status === 'concluido' || agendamento.status === 'Concluído') && (
+                                        <button
+                                            onClick={() => setShowAvaliacaoModal(true)}
+                                            className="px-4 py-2 bg-[#A75C00] text-white rounded-lg hover:bg-[#8B4D00] transition-colors flex items-center"
+                                        >
+                                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                            </svg>
+                                            Avaliar Cliente
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="flex items-center space-x-4">
                                     <div className="text-2xl font-bold text-[#AC5906]">
@@ -507,6 +527,23 @@ export const ExibirAgendamentoFornecedor = ({ idServico }: ExibirAgendamentoForn
                     </div>
                 </div>
             )}
+
+            {/* Modal de Avaliação do Cliente */}
+            {showAvaliacaoModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <AvaliacaoUsuario
+                                id_usuario={agendamento.id_usuario}
+                                id_servico={idServico}
+                                onAvaliacaoConcluida={handleAvaliacaoConcluida}
+                                onCancelar={() => setShowAvaliacaoModal(false)}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <Modal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)}>
                 <div className="fixed inset-0 flex items-center justify-center z-[1000]">
                     <div onClick={() => setIsChatOpen(false)} className="fixed inset-0 bg-black opacity-40"></div>

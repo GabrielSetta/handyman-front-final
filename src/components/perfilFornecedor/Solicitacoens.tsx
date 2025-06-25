@@ -11,6 +11,7 @@ import { Modal } from "../Modal";
 import Chat from "../Chat";
 import { Loading } from "../Loading";
 import { useUser } from "../../contexts/UserContext";
+import { AvaliacaoUsuario } from '../ranking/AvaliacaoUsuario';
 
 
 interface PerfilProps {
@@ -26,6 +27,7 @@ const getStatusConfig = (status: string) => {
         case 'em andamento':
             return { color: '#2196F3', bgColor: '#E3F2FD', text: 'Em Andamento' };
         case 'concluido':
+        case 'concluído':
             return { color: '#4CAF50', bgColor: '#E8F5E9', text: 'Concluído' };
         case 'cancelado':
             return { color: '#F44336', bgColor: '#FFEBEE', text: 'Cancelado' };
@@ -68,6 +70,9 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
     const [id_servico, setIdServico] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [paginaAtual, setPaginaAtual] = useState(1);
+    const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
+    const [servicoParaAvaliar, setServicoParaAvaliar] = useState<Solicitacao | null>(null);
+    const [rankingsClientes, setRankingsClientes] = useState<Record<string, { nivel: string; score: number; total_avaliacoes: number }>>({});
     const itensPorPagina = 6;
 
     const { setStatus } = useUser();
@@ -82,6 +87,12 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
 
             const response = await axios.get(`${URLAPI}/fornecedor/${idFornecedor}/solicitacoes`);
             setSolicitacoes(response.data);
+            
+            // Buscar rankings dos clientes
+            const clientesUnicos = [...new Set(response.data.map((s: Solicitacao) => s.usuario.id_usuario))];
+            for (const idUsuario of clientesUnicos as string[]) {
+                await buscarRankingCliente(idUsuario);
+            }
         } catch (error: unknown) {
             console.error('Erro ao buscar solicitações:', error);
 
@@ -94,6 +105,30 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
         setIdServico(idServico);
         setIsChatOpen(true);
     }
+
+    const handleAvaliacaoConcluida = () => {
+        setShowAvaliacaoModal(false);
+        setServicoParaAvaliar(null);
+        toast.success('Avaliação do cliente enviada com sucesso!');
+        buscarSolicitacoes(); // Recarregar dados para atualizar status se necessário
+    };
+
+    const buscarRankingCliente = async (idUsuario: string) => {
+        try {
+            const response = await axios.get(`${URLAPI}/ranking/usuario/${idUsuario}`);
+            setRankingsClientes(prev => ({
+                ...prev,
+                [idUsuario]: response.data
+            }));
+        } catch (error) {
+            console.error('Erro ao buscar ranking do cliente:', error);
+            // Se não conseguir buscar, define um ranking padrão
+            setRankingsClientes(prev => ({
+                ...prev,
+                [idUsuario]: { nivel: 'Bronze', score: 0, total_avaliacoes: 0 }
+            }));
+        }
+    };
 
     // Efeito para carregar solicitações iniciais e quando verificarStatus mudar
     useEffect(() => {
@@ -331,8 +366,16 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
                                                     />
                                                 </div>
                                                 <div>
-                                                    <h3 className="text-lg font-semibold text-gray-800">
+                                                    <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                                         {solicitacao.usuario?.nome}
+                                                        {rankingsClientes[solicitacao.usuario.id_usuario] && (
+                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F5F5F5] text-[#A75C00] border border-[#A75C00] ml-2">
+                                                                {rankingsClientes[solicitacao.usuario.id_usuario].nivel}
+                                                                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                                                </svg>
+                                                            </span>
+                                                        )}
                                                     </h3>
                                                     <p className="text-sm text-gray-500">{solicitacao.servico.categoria}</p>
                                                 </div>
@@ -363,14 +406,32 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
                                         {solicitacao.usuario && (
                                             <div className="mt-4 pt-4 border-t border-gray-100">
                                                 <div className="space-y-2 text-sm text-gray-600">
-                                                    <div
-                                                        className="px-3 w-32 py-1 rounded-full text-center text-sm font-medium"
-                                                        style={{
-                                                            backgroundColor: statusConfig.bgColor,
-                                                            color: statusConfig.color
-                                                        }}
-                                                    >
-                                                        {statusConfig.text}
+                                                    <div className="flex items-center justify-between">
+                                                        <div
+                                                            className="px-3 w-32 py-1 rounded-full text-center text-sm font-medium"
+                                                            style={{
+                                                                backgroundColor: statusConfig.bgColor,
+                                                                color: statusConfig.color
+                                                            }}
+                                                        >
+                                                            {statusConfig.text}
+                                                        </div>
+                                                        {/* Botão de Avaliar Cliente - aparece quando serviço está concluído */}
+                                                        {(solicitacao.servico.status === 'concluido' || solicitacao.servico.status === 'Concluído') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setServicoParaAvaliar(solicitacao);
+                                                                    setShowAvaliacaoModal(true);
+                                                                }}
+                                                                className="px-3 py-1 bg-[#A75C00] text-white rounded-lg hover:bg-[#8B4D00] transition-colors flex items-center text-sm"
+                                                            >
+                                                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                                                                </svg>
+                                                                Avaliar
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -559,6 +620,25 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
                     </div>
                 </div>
             </Modal>
+
+            {/* Modal de Avaliação do Cliente */}
+            {showAvaliacaoModal && servicoParaAvaliar && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-[1000] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <AvaliacaoUsuario
+                                id_usuario={servicoParaAvaliar.usuario.id_usuario}
+                                id_servico={servicoParaAvaliar.servico.id_servico}
+                                onAvaliacaoConcluida={handleAvaliacaoConcluida}
+                                onCancelar={() => {
+                                    setShowAvaliacaoModal(false);
+                                    setServicoParaAvaliar(null);
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
 
     );
