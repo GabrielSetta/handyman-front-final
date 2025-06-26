@@ -18,6 +18,15 @@ interface PerfilProps {
     idFornecedor: string | undefined
 }
 
+// Adicionar tipo para estatísticas resumidas
+interface EstatisticasResumidas {
+    nivel: string;
+    score: number;
+    total_avaliacoes: number;
+    top_aspectos_positivos: { aspecto: string; percentual: number }[];
+    top_aspectos_negativos: { aspecto: string; percentual: number }[];
+}
+
 const getStatusConfig = (status: string) => {
     switch (status.toLowerCase()) {
         case 'pendente':
@@ -73,6 +82,9 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
     const [showAvaliacaoModal, setShowAvaliacaoModal] = useState(false);
     const [servicoParaAvaliar, setServicoParaAvaliar] = useState<Solicitacao | null>(null);
     const [rankingsClientes, setRankingsClientes] = useState<Record<string, { nivel: string; score: number; total_avaliacoes: number }>>({});
+    const [showEstatisticasModal, setShowEstatisticasModal] = useState(false);
+    const [estatisticasCliente, setEstatisticasCliente] = useState<EstatisticasResumidas | null>(null);
+    const [loadingEstatisticas, setLoadingEstatisticas] = useState(false);
     const itensPorPagina = 6;
 
     const { setStatus } = useUser();
@@ -287,6 +299,35 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
         setPaginaAtual(1);
     }, [filtroStatus, filtroData]);
 
+    // Função para buscar estatísticas resumidas
+    const buscarEstatisticasCliente = async (id_usuario: string) => {
+        console.log('🔍 Buscando estatísticas para usuário:', id_usuario);
+        setLoadingEstatisticas(true);
+        try {
+            const url = `${URLAPI}/ranking/usuario/${id_usuario}/resumo`;
+            console.log('🌐 Fazendo requisição para:', url);
+            
+            const res = await fetch(url);
+            console.log('📡 Resposta da API:', res.status, res.statusText);
+            
+            if (res.ok) {
+                const data = await res.json();
+                console.log('✅ Dados recebidos:', data);
+                setEstatisticasCliente(data);
+                setShowEstatisticasModal(true);
+                console.log('🎯 Modal deve estar visível agora');
+            } else {
+                console.error('❌ Erro na API:', res.status, res.statusText);
+                const errorText = await res.text();
+                console.error('❌ Detalhes do erro:', errorText);
+            }
+        } catch (e) {
+            console.error('❌ Erro ao buscar estatísticas:', e);
+        } finally {
+            setLoadingEstatisticas(false);
+        }
+    };
+
     if (isLoading) {
         return <Loading />;
     }
@@ -369,7 +410,15 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
                                                     <h3 className="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                                         {solicitacao.usuario?.nome}
                                                         {rankingsClientes[solicitacao.usuario.id_usuario] && (
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F5F5F5] text-[#A75C00] border border-[#A75C00] ml-2">
+                                                            <span
+                                                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F5F5F5] text-[#A75C00] border border-[#A75C00] ml-2 cursor-pointer"
+                                                                title="Ver estatísticas do cliente"
+                                                                onClick={e => {
+                                                                    console.log('🖱️ Clique detectado no nível do cliente');
+                                                                    e.stopPropagation();
+                                                                    buscarEstatisticasCliente(solicitacao.usuario.id_usuario);
+                                                                }}
+                                                            >
                                                                 {rankingsClientes[solicitacao.usuario.id_usuario].nivel}
                                                                 <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
@@ -635,6 +684,37 @@ export const Solicitacoes = ({ idFornecedor }: PerfilProps) => {
                                     setServicoParaAvaliar(null);
                                 }}
                             />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showEstatisticasModal && estatisticasCliente && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                    <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md relative">
+                        <button
+                            className="absolute top-2 right-2 text-gray-500 hover:text-gray-800"
+                            onClick={() => setShowEstatisticasModal(false)}
+                        >
+                            &times;
+                        </button>
+                        <h2 className="text-xl font-bold text-[#A75C00] mb-2">Estatísticas do Cliente</h2>
+                        <p className="mb-1"><b>Nível:</b> {estatisticasCliente.nivel}</p>
+                        <p className="mb-1"><b>Score:</b> {estatisticasCliente.score}/100</p>
+                        <p className="mb-4"><b>Total de avaliações:</b> {estatisticasCliente.total_avaliacoes}</p>
+                        <div className="mb-3">
+                            <h3 className="font-semibold text-[#A75C00]">Principais Pontos Positivos</h3>
+                            {estatisticasCliente.top_aspectos_positivos.length === 0 && <p className="text-gray-500 text-sm">Nenhum ponto positivo destacado.</p>}
+                            {estatisticasCliente.top_aspectos_positivos.map((item, idx) => (
+                                <div key={idx} className="text-sm">{item.aspecto}: <b>{item.percentual}%</b></div>
+                            ))}
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-[#A75C00]">Principais Pontos de Atenção</h3>
+                            {estatisticasCliente.top_aspectos_negativos.length === 0 && <p className="text-gray-500 text-sm">Nenhum ponto negativo destacado.</p>}
+                            {estatisticasCliente.top_aspectos_negativos.map((item, idx) => (
+                                <div key={idx} className="text-sm">{item.aspecto}: <b>{item.percentual}%</b></div>
+                            ))}
                         </div>
                     </div>
                 </div>
