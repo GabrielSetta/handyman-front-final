@@ -5,7 +5,7 @@ import { DadosPessoais } from "./DadosPessoais";
 import { HistoricoServico } from "../../types/historicoServico";
 import { URLAPI } from "../../constants/ApiUrl";
 import { Agenda } from "./Agenda";
-
+import { RankingUsuario } from "./RankingUsuario";
 
 interface PerfilProps {
     id: string | undefined
@@ -101,6 +101,15 @@ export const PerfilUsuario = ({ id }: PerfilProps) => {
                         Dados pessoais
                     </li>
                     <li
+                        onClick={() => handleItemClick(5)}
+                        className={`cursor-pointer transition-colors  ${itemSelecionado === 5
+                                ? 'text-black font-medium'
+                                : 'text-gray-600 hover:text-orange-500'
+                            }`}
+                    >
+                        Meu Ranking
+                    </li>
+                    <li
                         onClick={() => handleItemClick(4)}
                         className={`cursor-pointer transition-colors  ${itemSelecionado === 4
                                 ? 'text-black font-medium'
@@ -111,26 +120,34 @@ export const PerfilUsuario = ({ id }: PerfilProps) => {
                     </li>
                 </ul>
             </div>
-            {mudarPagina === 1 && (
-                <Pagina_inicial historico={historicoServico} setMudarPagina={handleItemClick} usuario={usuario} setHistorico={sethistoricoServico} />
-            )}
-            {mudarPagina === 2 && (
-                <DadosPessoais
-                    email={usuario?.email}
-                    id_usuario={usuario?.id_usuario}
-                    nome={usuario?.nome}
-                    telefone={usuario?.telefone}
-                    picture={usuario?.picture}
-                />
-            )}
-
-            {mudarPagina === 3 && (
-                <Agenda
-                    isLoading={isLoading}
-                    historicoServico={historicoServico}
-                    setHistorico={sethistoricoServico}
-                />
-            )}
+            {/* Painel principal */}
+            <div className="flex-1">
+                {mudarPagina === 1 && (
+                    <Pagina_inicial historico={historicoServico} setMudarPagina={handleItemClick} usuario={usuario} setHistorico={sethistoricoServico} />
+                )}
+                {mudarPagina === 2 && (
+                    <DadosPessoais
+                        email={usuario?.email}
+                        id_usuario={usuario?.id_usuario}
+                        nome={usuario?.nome}
+                        telefone={usuario?.telefone}
+                        picture={usuario?.picture}
+                    />
+                )}
+                {mudarPagina === 3 && (
+                    <Agenda
+                        isLoading={isLoading}
+                        historicoServico={historicoServico}
+                        setHistorico={sethistoricoServico}
+                    />
+                )}
+                {mudarPagina === 5 && (
+                    <RankingUsuario id_usuario={usuario?.id_usuario || ''} />
+                )}
+                {mudarPagina === 4 && (
+                    <div className="p-8">Privacidade e dados</div>
+                )}
+            </div>
         </div>
     );
 
