@@ -260,32 +260,7 @@ export const RankingUsuario: React.FC<RankingUsuarioProps> = ({ id_usuario }) =>
                                 </div>
                             )}
 
-                            {/* Aspectos Negativos */}
-                            {estatisticas?.aspectos_negativos?.length > 0 && (
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold text-red-700 mb-3">
-                                        ❌ Aspectos Mais Criticados
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {(estatisticas.aspectos_negativos || []).map((aspecto, index) => (
-                                            <div key={index} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-                                                <span className="text-sm text-red-800">{aspecto.aspecto}</span>
-                                                <div className="flex items-center space-x-2">
-                                                    <div className="w-20 bg-red-200 rounded-full h-2">
-                                                        <div 
-                                                            className="bg-red-500 h-2 rounded-full"
-                                                            style={{ width: `${aspecto.percentual}%` }}
-                                                        ></div>
-                                                    </div>
-                                                    <span className="text-sm font-medium text-red-700">
-                                                        {aspecto.percentual}%
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+
 
                             {/* Mensagem quando não há avaliações */}
                             {estatisticas.total_avaliacoes === 0 && (

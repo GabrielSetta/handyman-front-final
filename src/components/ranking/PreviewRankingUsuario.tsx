@@ -128,30 +128,12 @@ export const PreviewRankingUsuario: React.FC<PreviewRankingUsuarioProps> = ({
                             </p>
                         </div>
 
-                        {/* Aspectos Negativos */}
-                        {ranking.aspectos_negativos.length > 0 ? (
-                            <div>
-                                <h3 className="text-lg font-semibold text-red-700 mb-3">
-                                    ⚠️ Aspectos Negativos
-                                </h3>
-                                <div className="space-y-2">
-                                    {ranking.aspectos_negativos.map((aspecto, index) => (
-                                        <div key={index} className="flex items-center justify-between p-2 bg-red-50 rounded">
-                                            <span className="text-sm text-red-800">{aspecto.aspecto}</span>
-                                            <span className="text-sm font-medium text-red-700">
-                                                {aspecto.percentual}%
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="text-center p-4 bg-green-50 rounded-lg">
-                                <p className="text-green-800">
-                                    ✅ Nenhum aspecto negativo registrado
-                                </p>
-                            </div>
-                        )}
+                        {/* Mensagem Positiva */}
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
+                            <p className="text-green-800">
+                                ✅ Perfil do cliente disponível
+                            </p>
+                        </div>
 
                         {/* Recomendação */}
                         <div className="bg-gray-50 p-4 rounded-lg">
